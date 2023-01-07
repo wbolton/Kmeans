@@ -1,0 +1,16 @@
+{
+    "editor.formatOnSave": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "python.formatting.blackPath": "${workspaceFolder}/.venv/Scripts/black",
+    "python.formatting.provider": "black",
+    "python.sortImports.path": "${workspaceFolder}/.venv/Scripts/isort",
+    "python.linting.pylintPath": "${workspaceFolder}/.venv/Scripts/pylint",
+    "terminal.integrated.enablePersistentSessions": false,
+    "terminal.integrated.persistentSessionReviveProcess": "never",
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "src"
+    },
+    "python.analysis.typeCheckingMode": "basic"
+}
