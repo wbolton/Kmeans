@@ -118,8 +118,8 @@ if __name__ == "__main__":
     y_full = y_full.iloc[permutations]  # type: ignore
 
     # From dataframe to ndarray
-    X_full = X_full.values
-    y_full = y_full.values
+    X_full = X_full.values # type: ignore
+    y_full = y_full.values # type: ignore
 
     # Scale data
     scaler = MinMaxScaler()
