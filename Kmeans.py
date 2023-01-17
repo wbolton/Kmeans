@@ -1,6 +1,4 @@
-# from Typing import Optional, Union
-import itertools
-import operator
+from typing import Optional
 
 import numpy as np
 import seaborn as sns
@@ -15,12 +13,10 @@ from sklearn.preprocessing import MinMaxScaler
 def plot_comparison(
     data: np.ndarray,
     predicted_clusters: np.ndarray,
-    true_clusters = None,
-    centers = [],
+    true_clusters: Optional[np.ndarray] = None,
+    centres: Optional[list] = None,
     show: bool = True,
 ):
-
-    # Use this function to visualize the results on Stage 6.
 
     if true_clusters is not None:
         plt.figure(figsize=(20, 10))
@@ -29,17 +25,17 @@ def plot_comparison(
         sns.scatterplot(
             x=data[:, 0], y=data[:, 1], hue=predicted_clusters, palette="deep"
         )
-        if centers is not None:
+        if centres is not None:
             sns.scatterplot(
-                x=centers[:, 0], y=centers[:, 1], marker="X", color="k", s=200
+                x=centres[:, 0], y=centres[:, 1], marker="X", color="k", s=200
             )
         plt.grid()
 
         plt.subplot(1, 2, 2)
         sns.scatterplot(x=data[:, 0], y=data[:, 1], hue=true_clusters, palette="deep")
-        if centers is not None:
+        if centres is not None:
             sns.scatterplot(
-                x=centers[:, 0], y=centers[:, 1], marker="X", color="k", s=200
+                x=centres[:, 0], y=centres[:, 1], marker="X", color="k", s=200
             )
         plt.grid()
     else:
@@ -47,9 +43,9 @@ def plot_comparison(
         sns.scatterplot(
             x=data[:, 0], y=data[:, 1], hue=predicted_clusters, palette="deep"
         )
-        if centers is not None:
+        if centres is not None:
             sns.scatterplot(
-                x=centers[:, 0], y=centers[:, 1], marker="X", color="k", s=200
+                x=centres[:, 0], y=centres[:, 1], marker="X", color="k", s=200
             )
         plt.grid()
 
@@ -62,9 +58,9 @@ class CustomKMeans:
     def __init__(self, k: int, max_iter: int = 1000):
         self.k: int = k
         self.centres = []
-        self.lp_norm = None  # Optional[Union[int, str]]
+        self.lp_norm = None
         self.iterations: int = 0
-        self.max_iter = max_iter
+        self.max_iter: int = max_iter
 
     def fit(self, feature_array: np.ndarray, eps=1e-6, verbose: bool = False) -> None:
         if len(self.centres) == 0:
@@ -87,12 +83,12 @@ class CustomKMeans:
         return self.find_nearest_centre_coords(feature_array=feature_array)
 
     def find_nearest_centre(self, feature_array: np.ndarray) -> np.ndarray:
-        centroids_count = np.shape(self.centres)[0] # type: ignore        
+        centroids_count = np.shape(self.centres)[0]  # type: ignore
         data_input_count = np.shape(feature_array)[0]
         closest_centroids = np.empty((0, data_input_count), int)
         for row in feature_array:
             distances = np.empty((0, centroids_count), float)
-            for centroid in self.centres: # type: ignore
+            for centroid in self.centres:  # type: ignore
                 dist = linalg.norm(x=(row - centroid), ord=self.lp_norm)
                 distances = np.append(distances, dist)
             min_dist = distances.argmin()
@@ -101,10 +97,12 @@ class CustomKMeans:
 
     def find_nearest_centre_coords(self, feature_array: np.ndarray) -> list:
         centre_labels = self.find_nearest_centre(feature_array=feature_array)
-        coords = [self.centres[x] for x in centre_labels] # type: ignore
+        coords = [self.centres[x] for x in centre_labels]  # type: ignore
         return coords
 
-    def calculate_new_centre(self, feature_array: np.ndarray, lp_norm=None) -> np.ndarray:
+    def calculate_new_centre(
+        self, feature_array: np.ndarray, lp_norm=None
+    ) -> np.ndarray:
         cluster_labels = self.find_nearest_centre(feature_array=feature_array)
         clusters = list(zip(cluster_labels, feature_array))
         means = {}
@@ -114,40 +112,42 @@ class CustomKMeans:
             means[cluster] = np.mean(tmp, axis=0)
         return np.array(list(means.values()))
 
+    def calc_error(self, feature_array: np.ndarray) -> float:
+        predicted_cluster_nums = self.predict(feature_array)
+        predicted_centres = self.predict_coords(feature_array=feature_array)
+        errors = {index: [] for index, center in enumerate(self.centres)}
+        for vector, cluster_coords, cluster_num in zip(
+            feature_array, predicted_centres, predicted_cluster_nums
+        ):
+            distance_ = vector - cluster_coords
+            errors[cluster_num].append(distance_)
 
-def find_appropriate_k(feature_array: np.ndarray, p: float = 0.01, max_k: int = 10) -> int:
-    # BELOW HERE IS NEW
+        norm_errors = []
+        for error in errors.values():
+            norm_errors.append(np.linalg.norm(error))
+        return float(sum(norm_errors) / len(self.centres))
+
+
+def find_appropriate_k(
+    feature_array: np.ndarray, p: float = 0.2, max_k: int = 10
+) -> int:
     errorslist = []
     error_reduction = 1
-    sse = None
+    k = max_k
 
     for k in range(1, max_k + 1):
         model = CustomKMeans(k=k)
-        current_k = k
         model.fit(feature_array=feature_array)
-        centres = model.centres
+        error = model.calc_error(feature_array=feature_array)
 
-        predicted_clusters = model.predict(feature_array=feature_array)
-        prediction_coords = np.array([centres[i] for i in predicted_clusters])
-
-        zipped = list(zip(prediction_coords, feature_array))
-        error_sum = 0
-        for x in zipped:
-            # error = (linalg.norm(x[0] - x[1])**2)/len(x[0])
-            centroid = x[0]
-            position = x[1]
-            diff = (centroid - position) ** 2
-            error = ((centroid - position) ** 2).mean(axis=0)
-            error_sum += error
-        if sse is not None:
-            error_reduction = abs(1 - float(error_sum)/float(sse))
-        if error_reduction < p:
-            break
-        sse = error_sum
-        errorslist.append(sse)
-
-    print(errorslist)
-    return current_k
+        if error is not None:
+            if k > 1:
+                previous_error = errorslist[k - 2]
+                error_reduction = abs(1 - float(error) / float(previous_error))
+                if error_reduction < p:
+                    break
+            errorslist.append(error)
+    return k - 1
 
 
 if __name__ == "__main__":
@@ -159,15 +159,21 @@ if __name__ == "__main__":
     # Permute it to make things more interesting
     rnd = np.random.RandomState(42)
     permutations = rnd.permutation(len(X_full))
-    X_full = X_full.iloc[permutations]  # type: ignore   
-    y_full = y_full.iloc[permutations]  # type: ignore   
+    X_full = X_full.iloc[permutations]  # type: ignore
+    y_full = y_full.iloc[permutations]  # type: ignore
 
     # From dataframe to ndarray
-    X_full = X_full.values  # type: ignore   
-    y_full = y_full.values  # type: ignore   
+    X_full = X_full.values  # type: ignore
+    y_full = y_full.values  # type: ignore
 
     # Scale data
     scaler = MinMaxScaler()
     X_full = scaler.fit_transform(X_full)
 
-    find_appropriate_k(feature_array=X_full)
+    k_choice = find_appropriate_k(feature_array=X_full)
+
+    model = CustomKMeans(k=k_choice)
+    model.fit(feature_array=X_full)
+    predicted_clusters = model.predict(feature_array=X_full)
+
+    plot_comparison(data=X_full, predicted_clusters=predicted_clusters)
