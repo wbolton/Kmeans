@@ -7,8 +7,6 @@ from numpy import linalg
 from sklearn.datasets import load_wine
 from sklearn.preprocessing import MinMaxScaler
 
-# scroll down to the bottom to implement your solution
-
 
 def plot_comparison(
     data: np.ndarray,
